@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>我的重訓助手 2.2 (Bug 修復版)</title>
+    <title>我的重訓助手 v2.3</title>
     
-    <link rel="manifest" href="manifest.json?v=6">
-    <link rel="icon" type="image/png" href="icon.png?v=6" sizes="512x512">
-    <link rel="apple-touch-icon" href="icon.png?v=6">
+    <link rel="manifest" href="manifest.json?v=7">
+    <link rel="icon" type="image/png" href="icon.png?v=7" sizes="512x512">
+    <link rel="apple-touch-icon" href="icon.png?v=7">
     <meta name="theme-color" content="#3b82f6">
 
     <style>
@@ -24,7 +24,9 @@
         body { background-color: var(--bg); color: var(--text); margin: 0; padding: 16px; padding-bottom: 60px; }
         
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-        h2, h3 { margin: 0; color: #0f172a; }
+        h2 { margin: 0; color: #0f172a; display: flex; align-items: center; gap: 8px; }
+        .version-badge { background: #e2e8f0; color: #475569; font-size: 12px; padding: 2px 6px; border-radius: 12px; font-weight: normal; }
+        h3 { margin: 0; color: #0f172a; }
         .btn-settings { background: none; border: none; font-size: 24px; cursor: pointer; padding: 4px; }
 
         .card { background: var(--card); border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 16px; border: 1px solid var(--border); }
@@ -60,7 +62,7 @@
 <body>
 
     <div class="header">
-        <h2>🏋️ 新增重訓紀錄</h2>
+        <h2>🏋️ 新增重訓紀錄 <span class="version-badge">v2.3</span></h2>
         <button class="btn-settings" onclick="toggleSettings(true)">⚙️</button>
     </div>
 
@@ -124,7 +126,6 @@
     </div>
 
     <script>
-        // 為了避免再次發生單字消失的問題，我將內建資料庫還原為完整的陣列
         const builtInHistory = [
             { date: "2026-06-09", item: "Abdominal Crunch", value: "36*12/12/38*12/12" },
             { date: "2026-06-09", item: "Standing Calf Raise", value: "115*12/125*13/13/12" },
@@ -139,9 +140,11 @@
             { date: "2026-06-07", item: "Squat Lunge", value: "11*2*12/左/右/左/右" }
         ];
 
-        // 🌟 修復核心：先讀取 localStorage 的完整紀錄，再產生不重複的項目名單
         let myRecords = JSON.parse(localStorage.getItem('gym_records')) || builtInHistory;
-        let exerciseUniqueNames = [...new Set(myRecords.map(h => h.item))];
+        
+        // 🌟 終極修復：把內建紀錄跟你的本地紀錄合併在一起，保證所有單字都在字典裡！
+        const allCombinedRecords = [...builtInHistory, ...myRecords];
+        let exerciseUniqueNames = [...new Set(allCombinedRecords.map(h => h.item))];
         
         let myKnowledgeBase = JSON.parse(localStorage.getItem('gym_knowledge_base')) || {};
         let geminiApiKey = localStorage.getItem('gym_gemini_key') || '';
@@ -285,8 +288,8 @@
             aiBox.style.display = 'block';
 
             try {
-                // 🌟 修復核心：更新為最新的 gemini-1.5-flash-latest 模型
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiApiKey}`;
+                // 🌟 改回最標準穩定的 gemini-1.5-flash
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`;
                 
                 const promptText = `我正在健身，動作名稱是「${itemName}」。請以繁體中文分析此動作，並嚴格以 JSON 格式回傳，格式需包含兩個 Key："summary" (一句話摘要，例如：主要練闊背肌，注意肩胛收合)、"details" (詳細說明)。
                 在 "details" 的內容中，請分段說明（可以使用 \\n 來換行），必須包含：
@@ -301,7 +304,6 @@
                     body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
                 });
 
-                // 🌟 修復核心：更精準的錯誤捕捉機制，抓取 Google 官方報錯訊息
                 if (!response.ok) {
                     const errData = await response.json();
                     const googleErrorMsg = errData.error?.message || "未知錯誤";
@@ -323,7 +325,8 @@
             } catch (error) {
                 console.error("❌ 系統除錯錯誤紀錄:", error);
                 aiSummary.innerHTML = `❌ AI 解析失敗`;
-                aiContent.innerHTML = `<b>錯誤原因：</b><br>${error.message}<br><br>請確認您的 API 金鑰是否正確，或是有足夠的額度。`;
+                // 🌟 這裡會直接印出真正的死因，如果再錯，截圖這個畫面我就能秒懂！
+                aiContent.innerHTML = `<b>錯誤原因：</b><br>${error.message}<br><br>請確認您的 API 金鑰是否正確。`;
                 aiContent.style.display = 'block'; 
                 document.getElementById('aiToggleIcon').textContent = '收起 🔼';
             }
@@ -339,7 +342,6 @@
             myRecords.unshift({ date, item, value });
             localStorage.setItem('gym_records', JSON.stringify(myRecords));
             
-            // 🌟 修復核心：儲存時動態更新選項清單
             if (!exerciseUniqueNames.includes(item)) {
                 exerciseUniqueNames.push(item);
             }
