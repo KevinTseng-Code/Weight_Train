@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>我的重訓助手 v2.4</title>
+    <title>我的重訓助手 v2.5</title>
     
-    <link rel="manifest" href="manifest.json?v=8">
-    <link rel="icon" type="image/png" href="icon.png?v=8" sizes="512x512">
-    <link rel="apple-touch-icon" href="icon.png?v=8">
+    <link rel="manifest" href="manifest.json?v=9">
+    <link rel="icon" type="image/png" href="icon.png?v=9" sizes="512x512">
+    <link rel="apple-touch-icon" href="icon.png?v=9">
     <meta name="theme-color" content="#3b82f6">
 
     <style>
@@ -49,8 +49,13 @@
         .ai-content { padding: 0 12px 12px 12px; border-top: 1px dashed #fde047; display: none; margin-top: 4px; padding-top: 12px; line-height: 1.6; white-space: pre-line; }
 
         .btn-submit { width: 100%; background: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 8px;}
-        .log-item { border-left: 4px solid var(--primary); padding-left: 10px; margin-bottom: 12px; font-size: 14px; }
+        
+        /* 🌟 歷史紀錄排版大升級：加入刪除按鈕 */
+        .log-item { display: flex; justify-content: space-between; align-items: center; border-left: 4px solid var(--primary); padding: 8px 8px 8px 10px; margin-bottom: 12px; font-size: 14px; background: #f8fafc; border-radius: 0 6px 6px 0; }
+        .log-content { flex: 1; }
         .log-date { font-weight: bold; color: #64748b; font-size: 13px; margin-bottom: 4px;}
+        .btn-delete-log { background: none; border: none; color: #ef4444; cursor: pointer; padding: 8px; font-size: 16px; opacity: 0.8; transition: 0.2s; }
+        .btn-delete-log:hover { opacity: 1; transform: scale(1.1); }
 
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 999; }
         .modal-content { background: white; padding: 20px; border-radius: 12px; width: 90%; max-width: 400px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
@@ -62,7 +67,7 @@
 <body>
 
     <div class="header">
-        <h2>🏋️ 新增重訓紀錄 <span class="version-badge">v2.4</span></h2>
+        <h2>🏋️ 新增重訓紀錄 <span class="version-badge">v2.5</span></h2>
         <button class="btn-settings" onclick="toggleSettings(true)">⚙️</button>
     </div>
 
@@ -142,7 +147,7 @@
 
         let myRecords = JSON.parse(localStorage.getItem('gym_records')) || builtInHistory;
         
-        const allCombinedRecords = [...builtInHistory, ...myRecords];
+        let allCombinedRecords = [...builtInHistory, ...myRecords];
         let exerciseUniqueNames = [...new Set(allCombinedRecords.map(h => h.item))];
         
         let myKnowledgeBase = JSON.parse(localStorage.getItem('gym_knowledge_base')) || {};
@@ -287,7 +292,6 @@
             aiBox.style.display = 'block';
 
             try {
-                // 🌟 更新為 2026 年最新主力的 gemini-2.5-flash 模型
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
                 
                 const promptText = `我正在健身，動作名稱是「${itemName}」。請以繁體中文分析此動作，並嚴格以 JSON 格式回傳，格式需包含兩個 Key："summary" (一句話摘要，例如：主要練闊背肌，注意肩胛收合)、"details" (詳細說明)。
@@ -351,6 +355,27 @@
             inputItem.focus();
         }
 
+        // 🌟 新增防呆刪除功能
+        function deleteRecord(index) {
+            // 從總紀錄清單中抓出那筆資料，印出警告訊息讓使用者確認
+            const record = myRecords[index];
+            const isConfirmed = confirm(`⚠️ 確定要刪除這筆紀錄嗎？\n\n日期：${record.date}\n項目：${record.item}\n重量：${record.value}\n\n(刪除後無法復原喔！)`);
+            
+            if (isConfirmed) {
+                // 從陣列中移除該筆資料
+                myRecords.splice(index, 1);
+                // 更新回本地儲存
+                localStorage.setItem('gym_records', JSON.stringify(myRecords));
+                
+                // 同步更新字典（以防使用者刪掉了最後一筆某個動作，清單要跟著變乾淨）
+                allCombinedRecords = [...builtInHistory, ...myRecords];
+                exerciseUniqueNames = [...new Set(allCombinedRecords.map(h => h.item))];
+                
+                // 重新繪製歷史清單
+                updateLogList();
+            }
+        }
+
         function updateLogList() {
             const listObj = document.getElementById('logList');
             document.getElementById('historyDaysDisplay').textContent = `最近 ${historyLimit} 天`;
@@ -365,12 +390,17 @@
             const allowedDates = uniqueDates.slice(0, historyLimit);
             const filteredRecords = myRecords.filter(r => allowedDates.includes(r.date));
 
+            // 🌟 將刪除按鈕與對應的「真實 index」綁定
             filteredRecords.forEach(r => {
+                const originalIndex = myRecords.indexOf(r);
                 const div = document.createElement('div');
                 div.className = 'log-item';
                 div.innerHTML = `
-                    <div class="log-date">${r.date}</div>
-                    <div><strong>${r.item}</strong>: ${r.value}</div>
+                    <div class="log-content">
+                        <div class="log-date">${r.date}</div>
+                        <div><strong>${r.item}</strong>: ${r.value}</div>
+                    </div>
+                    <button class="btn-delete-log" onclick="deleteRecord(${originalIndex})" title="刪除此紀錄">🗑️</button>
                 `;
                 listObj.appendChild(div);
             });
