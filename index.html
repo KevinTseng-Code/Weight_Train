@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>我的重訓助手 2.1 (強化版)</title>
+    <title>我的重訓助手 2.2 (Bug 修復版)</title>
     
-    <link rel="manifest" href="manifest.json?v=5">
-    <link rel="icon" type="image/png" href="icon.png?v=5" sizes="512x512">
-    <link rel="apple-touch-icon" href="icon.png?v=5">
+    <link rel="manifest" href="manifest.json?v=6">
+    <link rel="icon" type="image/png" href="icon.png?v=6" sizes="512x512">
+    <link rel="apple-touch-icon" href="icon.png?v=6">
     <meta name="theme-color" content="#3b82f6">
 
     <style>
@@ -23,7 +23,6 @@
         * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background-color: var(--bg); color: var(--text); margin: 0; padding: 16px; padding-bottom: 60px; }
         
-        /* 標題與右上角設定按鈕 */
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
         h2, h3 { margin: 0; color: #0f172a; }
         .btn-settings { background: none; border: none; font-size: 24px; cursor: pointer; padding: 4px; }
@@ -34,16 +33,13 @@
         input[type="text"], input[type="date"], input[type="password"], input[type="number"] { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 16px; outline: none; }
         input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
         
-        /* 自動推薦選單 */
         .suggestions { position: absolute; width: 100%; background: white; border: 1px solid var(--border); border-radius: 8px; max-height: 200px; overflow-y: auto; z-index: 100; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); display: none; }
         .suggestions div { padding: 12px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 15px; }
         .suggestions div:hover { background-color: #f0f7ff; }
 
-        /* 歷史帶入提示區 */
         .history-tip { background-color: #f0fdf4; border: 1px dashed #bbf7d0; padding: 12px; border-radius: 8px; margin-bottom: 16px; display: none; font-size: 14px; }
         .btn-use-past { background: #22c55e; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; margin-top: 6px; font-weight: bold; }
 
-        /* AI 教練提示區 (可展開) */
         .ai-tip { background-color: var(--ai-bg); border: 1px solid var(--ai-border); border-radius: 8px; margin-bottom: 16px; display: none; font-size: 14px; color: #854d0e; }
         .ai-header { padding: 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: bold; }
         .ai-summary { flex: 1; padding-right: 8px; }
@@ -54,7 +50,6 @@
         .log-item { border-left: 4px solid var(--primary); padding-left: 10px; margin-bottom: 12px; font-size: 14px; }
         .log-date { font-weight: bold; color: #64748b; font-size: 13px; margin-bottom: 4px;}
 
-        /* 彈出設定視窗 (Modal) */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 999; }
         .modal-content { background: white; padding: 20px; border-radius: 12px; width: 90%; max-width: 400px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .modal-buttons { display: flex; gap: 8px; margin-top: 16px; }
@@ -129,20 +124,26 @@
     </div>
 
     <script>
+        // 為了避免再次發生單字消失的問題，我將內建資料庫還原為完整的陣列
         const builtInHistory = [
             { date: "2026-06-09", item: "Abdominal Crunch", value: "36*12/12/38*12/12" },
             { date: "2026-06-09", item: "Standing Calf Raise", value: "115*12/125*13/13/12" },
+            { date: "2026-06-09", item: "Leg Extension", value: "47*12/12/49.5*12/13" },
             { date: "2026-06-08", item: "Diverging Lat Pulldown", value: "43*12*2/12右/12左/12右/12左/45×12右/12左" },
             { date: "2026-06-08", item: "Crossover Machine", value: "35*12/12/12/12" },
+            { date: "2026-06-08", item: "PL-Calf", value: "33.9*12/12/12/12" },
+            { date: "2026-06-08", item: "Seated Leg Curl", value: "50*12/12/45*/12/12" },
+            { date: "2026-06-08", item: "V-Crunch", value: "12/12/15/" },
             { date: "2026-06-07", item: "Inclined Chest Press Circular", value: "30*12/12/12/12" },
             { date: "2026-06-07", item: "Chest Press", value: "35*12/12/40*12/12" },
             { date: "2026-06-07", item: "Squat Lunge", value: "11*2*12/左/右/左/右" }
         ];
 
-        const exerciseUniqueNames = [...new Set(builtInHistory.map(h => h.item))];
+        // 🌟 修復核心：先讀取 localStorage 的完整紀錄，再產生不重複的項目名單
         let myRecords = JSON.parse(localStorage.getItem('gym_records')) || builtInHistory;
-        let myKnowledgeBase = JSON.parse(localStorage.getItem('gym_knowledge_base')) || {};
+        let exerciseUniqueNames = [...new Set(myRecords.map(h => h.item))];
         
+        let myKnowledgeBase = JSON.parse(localStorage.getItem('gym_knowledge_base')) || {};
         let geminiApiKey = localStorage.getItem('gym_gemini_key') || '';
         let historyLimit = parseInt(localStorage.getItem('gym_history_limit')) || 7;
 
@@ -150,7 +151,6 @@
             document.getElementById('trainingDate').value = new Date().toISOString().split('T')[0];
             if (!localStorage.getItem('gym_records')) localStorage.setItem('gym_records', JSON.stringify(myRecords));
             
-            // 初始化設定視窗的值
             document.getElementById('apiKeyInput').value = geminiApiKey;
             document.getElementById('historyLimitInput').value = historyLimit;
             
@@ -159,7 +159,6 @@
             setupBlurEvent();
         };
 
-        // --- 設定視窗邏輯 ---
         function toggleSettings(show) {
             document.getElementById('settingsModal').style.display = show ? 'flex' : 'none';
         }
@@ -172,11 +171,10 @@
             if (limit && limit > 0) { localStorage.setItem('gym_history_limit', limit); historyLimit = limit; }
             
             toggleSettings(false);
-            updateLogList(); // 更新顯示天數
+            updateLogList();
             alert('設定儲存成功！');
         }
 
-        // --- 動作輸入與搜尋邏輯 ---
         const inputItem = document.getElementById('itemName');
         const box = document.getElementById('suggestionBox');
 
@@ -225,13 +223,11 @@
         function hideTips() {
             document.getElementById('historyTip').style.display = 'none';
             document.getElementById('aiTipBox').style.display = 'none';
-            // 收合 AI 詳細內容
             document.getElementById('aiTipContent').style.display = 'none';
             document.getElementById('aiToggleIcon').textContent = '展開 🔽';
             lastValueFound = "";
         }
 
-        // --- 歷史紀錄帶入邏輯 ---
         let lastValueFound = "";
         function checkLastRecord(itemName) {
             const lastRecord = myRecords.find(r => r.item.toLowerCase() === itemName.toLowerCase());
@@ -247,7 +243,6 @@
             if (lastValueFound) document.getElementById('recordValue').value = lastValueFound;
         }
 
-        // --- AI 教練展開邏輯 ---
         function toggleAiDetails() {
             const content = document.getElementById('aiTipContent');
             const icon = document.getElementById('aiToggleIcon');
@@ -260,13 +255,11 @@
             }
         }
 
-        // --- ⭐ 進階 Gemini AI 教練核心邏輯 (強化 JSON 解析版) ---
         async function fetchAIKnowledge(itemName) {
             const aiBox = document.getElementById('aiTipBox');
             const aiSummary = document.getElementById('aiShortSummary');
             const aiContent = document.getElementById('aiTipContent');
             
-            // 查詢前先隱藏詳細內容
             aiContent.style.display = 'none';
             document.getElementById('aiToggleIcon').textContent = '展開 🔽';
 
@@ -292,14 +285,14 @@
             aiBox.style.display = 'block';
 
             try {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`;
+                // 🌟 修復核心：更新為最新的 gemini-1.5-flash-latest 模型
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiApiKey}`;
                 
-                // 更詳細且嚴格的 Prompt 提示詞
                 const promptText = `我正在健身，動作名稱是「${itemName}」。請以繁體中文分析此動作，並嚴格以 JSON 格式回傳，格式需包含兩個 Key："summary" (一句話摘要，例如：主要練闊背肌，注意肩胛收合)、"details" (詳細說明)。
                 在 "details" 的內容中，請分段說明（可以使用 \\n 來換行），必須包含：
                 1. 主要肌群與輔助肌群的解剖細節。
                 2. 執行時的安全注意事項。
-                3. 各種變化帶來的差異（例如：不同握距、手心朝向、站距或椅背角度的改變，會如何轉移肌肉受力焦點）。
+                3. 各種變化帶來的差異。
                 切記：你的回應必須只有 JSON，絕對不要包含任何其他文字或 Markdown 語法符號。`;
 
                 const response = await fetch(url, {
@@ -308,19 +301,17 @@
                     body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
                 });
 
+                // 🌟 修復核心：更精準的錯誤捕捉機制，抓取 Google 官方報錯訊息
                 if (!response.ok) {
                     const errData = await response.json();
-                    console.error("API 狀態碼錯誤:", errData);
-                    throw new Error(`API 連線錯誤: ${response.status}`);
+                    const googleErrorMsg = errData.error?.message || "未知錯誤";
+                    throw new Error(`Google API 拒絕連線: ${googleErrorMsg}`);
                 }
                 
                 const data = await response.json();
                 let rawText = data.candidates[0].content.parts[0].text;
-                console.log("🤖 Gemini 原始回傳內容：", rawText); // 開發者除錯用
 
-                // 強化版解析：只精準擷取 { 到 } 之間的內容
                 let jsonStr = rawText.substring(rawText.indexOf('{'), rawText.lastIndexOf('}') + 1);
-                
                 const aiResult = JSON.parse(jsonStr);
 
                 aiSummary.innerHTML = `💡 ${aiResult.summary}`;
@@ -331,14 +322,13 @@
 
             } catch (error) {
                 console.error("❌ 系統除錯錯誤紀錄:", error);
-                aiSummary.innerHTML = `❌ AI 解析失敗 (請看說明)`;
-                aiContent.innerHTML = `系統無法解析 AI 回傳的資料，或是 API 發生連線異常。<br><br><b>💡 除錯建議：</b><br>在電腦上按 <b>F12</b> 開啟開發者工具，切換到 <b>Console</b> 標籤，把紅色的錯誤訊息截圖給我看，我就能馬上幫你抓出問題點！`;
-                aiContent.style.display = 'block'; // 強制展開顯示錯誤提示
+                aiSummary.innerHTML = `❌ AI 解析失敗`;
+                aiContent.innerHTML = `<b>錯誤原因：</b><br>${error.message}<br><br>請確認您的 API 金鑰是否正確，或是有足夠的額度。`;
+                aiContent.style.display = 'block'; 
                 document.getElementById('aiToggleIcon').textContent = '收起 🔼';
             }
         }
 
-        // --- 儲存紀錄 ---
         function saveRecord() {
             const date = document.getElementById('trainingDate').value;
             const item = inputItem.value.trim();
@@ -349,7 +339,10 @@
             myRecords.unshift({ date, item, value });
             localStorage.setItem('gym_records', JSON.stringify(myRecords));
             
-            if (!exerciseUniqueNames.includes(item)) exerciseUniqueNames.push(item);
+            // 🌟 修復核心：儲存時動態更新選項清單
+            if (!exerciseUniqueNames.includes(item)) {
+                exerciseUniqueNames.push(item);
+            }
 
             inputItem.value = '';
             document.getElementById('recordValue').value = '';
@@ -358,7 +351,6 @@
             inputItem.focus();
         }
 
-        // --- ⭐ 依照天數限制更新列表 ---
         function updateLogList() {
             const listObj = document.getElementById('logList');
             document.getElementById('historyDaysDisplay').textContent = `最近 ${historyLimit} 天`;
@@ -369,13 +361,8 @@
                 return;
             }
 
-            // 1. 抓出所有不重複的日期並由新到舊排序
             const uniqueDates = [...new Set(myRecords.map(r => r.date))].sort((a, b) => new Date(b) - new Date(a));
-            
-            // 2. 根據設定的天數限制，擷取前 N 個日期
             const allowedDates = uniqueDates.slice(0, historyLimit);
-            
-            // 3. 過濾出屬於這些日期的紀錄來顯示
             const filteredRecords = myRecords.filter(r => allowedDates.includes(r.date));
 
             filteredRecords.forEach(r => {
