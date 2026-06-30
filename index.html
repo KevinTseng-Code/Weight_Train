@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>我的重訓助手 v2.3</title>
+    <title>我的重訓助手 v2.4</title>
     
-    <link rel="manifest" href="manifest.json?v=7">
-    <link rel="icon" type="image/png" href="icon.png?v=7" sizes="512x512">
-    <link rel="apple-touch-icon" href="icon.png?v=7">
+    <link rel="manifest" href="manifest.json?v=8">
+    <link rel="icon" type="image/png" href="icon.png?v=8" sizes="512x512">
+    <link rel="apple-touch-icon" href="icon.png?v=8">
     <meta name="theme-color" content="#3b82f6">
 
     <style>
@@ -62,7 +62,7 @@
 <body>
 
     <div class="header">
-        <h2>🏋️ 新增重訓紀錄 <span class="version-badge">v2.3</span></h2>
+        <h2>🏋️ 新增重訓紀錄 <span class="version-badge">v2.4</span></h2>
         <button class="btn-settings" onclick="toggleSettings(true)">⚙️</button>
     </div>
 
@@ -142,7 +142,6 @@
 
         let myRecords = JSON.parse(localStorage.getItem('gym_records')) || builtInHistory;
         
-        // 🌟 終極修復：把內建紀錄跟你的本地紀錄合併在一起，保證所有單字都在字典裡！
         const allCombinedRecords = [...builtInHistory, ...myRecords];
         let exerciseUniqueNames = [...new Set(allCombinedRecords.map(h => h.item))];
         
@@ -288,8 +287,8 @@
             aiBox.style.display = 'block';
 
             try {
-                // 🌟 改回最標準穩定的 gemini-1.5-flash
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`;
+                // 🌟 更新為 2026 年最新主力的 gemini-2.5-flash 模型
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
                 
                 const promptText = `我正在健身，動作名稱是「${itemName}」。請以繁體中文分析此動作，並嚴格以 JSON 格式回傳，格式需包含兩個 Key："summary" (一句話摘要，例如：主要練闊背肌，注意肩胛收合)、"details" (詳細說明)。
                 在 "details" 的內容中，請分段說明（可以使用 \\n 來換行），必須包含：
@@ -325,7 +324,6 @@
             } catch (error) {
                 console.error("❌ 系統除錯錯誤紀錄:", error);
                 aiSummary.innerHTML = `❌ AI 解析失敗`;
-                // 🌟 這裡會直接印出真正的死因，如果再錯，截圖這個畫面我就能秒懂！
                 aiContent.innerHTML = `<b>錯誤原因：</b><br>${error.message}<br><br>請確認您的 API 金鑰是否正確。`;
                 aiContent.style.display = 'block'; 
                 document.getElementById('aiToggleIcon').textContent = '收起 🔼';
