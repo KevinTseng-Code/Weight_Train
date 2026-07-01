@@ -3,12 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>我的重訓助手 v2.5</title>
+    <title>我的重訓助手 v3.0</title>
     
-    <link rel="manifest" href="manifest.json?v=9">
-    <link rel="icon" type="image/png" href="icon.png?v=9" sizes="512x512">
-    <link rel="apple-touch-icon" href="icon.png?v=9">
+    <link rel="manifest" href="manifest.json?v=10">
+    <link rel="icon" type="image/png" href="icon.png?v=10" sizes="512x512">
+    <link rel="apple-touch-icon" href="icon.png?v=10">
     <meta name="theme-color" content="#3b82f6">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
         :root {
@@ -21,7 +23,8 @@
             --ai-border: #fef08a;
         }
         * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { background-color: var(--bg); color: var(--text); margin: 0; padding: 16px; padding-bottom: 60px; }
+        /* 增加底部 padding 留給導覽列 */
+        body { background-color: var(--bg); color: var(--text); margin: 0; padding: 16px; padding-bottom: 80px; }
         
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
         h2 { margin: 0; color: #0f172a; display: flex; align-items: center; gap: 8px; }
@@ -32,8 +35,8 @@
         .card { background: var(--card); border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 16px; border: 1px solid var(--border); }
         .form-group { margin-bottom: 16px; position: relative; }
         label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 14px; }
-        input[type="text"], input[type="date"], input[type="password"], input[type="number"] { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 16px; outline: none; }
-        input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+        input[type="text"], input[type="date"], input[type="password"], input[type="number"], select { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 16px; outline: none; background: white;}
+        input:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
         
         .suggestions { position: absolute; width: 100%; background: white; border: 1px solid var(--border); border-radius: 8px; max-height: 200px; overflow-y: auto; z-index: 100; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); display: none; }
         .suggestions div { padding: 12px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 15px; }
@@ -50,79 +53,132 @@
 
         .btn-submit { width: 100%; background: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 8px;}
         
-        /* 🌟 歷史紀錄排版大升級：加入刪除按鈕 */
         .log-item { display: flex; justify-content: space-between; align-items: center; border-left: 4px solid var(--primary); padding: 8px 8px 8px 10px; margin-bottom: 12px; font-size: 14px; background: #f8fafc; border-radius: 0 6px 6px 0; }
         .log-content { flex: 1; }
         .log-date { font-weight: bold; color: #64748b; font-size: 13px; margin-bottom: 4px;}
         .btn-delete-log { background: none; border: none; color: #ef4444; cursor: pointer; padding: 8px; font-size: 16px; opacity: 0.8; transition: 0.2s; }
-        .btn-delete-log:hover { opacity: 1; transform: scale(1.1); }
 
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 999; }
         .modal-content { background: white; padding: 20px; border-radius: 12px; width: 90%; max-width: 400px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .modal-buttons { display: flex; gap: 8px; margin-top: 16px; }
         .btn-save-settings { flex: 1; background: var(--primary); color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; }
         .btn-close { flex: 1; background: #e2e8f0; color: #475569; border: none; padding: 10px; border-radius: 6px; font-weight: bold; }
+
+        /* 🌟 底部導覽列樣式 */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: white; display: flex; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); z-index: 900; }
+        .nav-item { flex: 1; text-align: center; padding: 16px 0; font-size: 14px; font-weight: bold; color: #64748b; cursor: pointer; transition: 0.2s; }
+        .nav-item.active { color: var(--primary); border-top: 3px solid var(--primary); background: #f0f7ff; }
+
+        /* 🌟 畫面切換控制 */
+        .view-section { display: none; }
+        .view-section.active { display: block; }
+        
+        .chart-container { position: relative; height: 250px; width: 100%; margin-bottom: 16px;}
+        .stat-box { background: #f0fdf4; border: 1px solid #bbf7d0; padding: 12px; border-radius: 8px; text-align: center; margin-bottom: 16px;}
+        .stat-value { font-size: 24px; font-weight: bold; color: #15803d; }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <h2>🏋️ 新增重訓紀錄 <span class="version-badge">v2.5</span></h2>
+        <h2>🏋️ 我的重訓助手 <span class="version-badge">v3.0</span></h2>
         <button class="btn-settings" onclick="toggleSettings(true)">⚙️</button>
     </div>
 
-    <div class="card">
-        <div class="form-group">
-            <label>訓練日期</label>
-            <input type="date" id="trainingDate">
-        </div>
-
-        <div class="form-group">
-            <label>項目名稱</label>
-            <input type="text" id="itemName" placeholder="輸入前幾個字自動推薦..." autocomplete="off">
-            <div class="suggestions" id="suggestionBox"></div>
-        </div>
-
-        <div class="ai-tip" id="aiTipBox">
-            <div class="ai-header" onclick="toggleAiDetails()">
-                <span class="ai-summary" id="aiShortSummary">💡 AI 準備中...</span>
-                <span class="ai-toggle" id="aiToggleIcon">展開 🔽</span>
+    <div id="viewRecord" class="view-section active">
+        <div class="card">
+            <div class="form-group">
+                <label>訓練日期</label>
+                <input type="date" id="trainingDate">
             </div>
-            <div class="ai-content" id="aiTipContent"></div>
+
+            <div class="form-group">
+                <label>項目名稱</label>
+                <input type="text" id="itemName" placeholder="輸入前幾個字自動推薦..." autocomplete="off">
+                <div class="suggestions" id="suggestionBox"></div>
+            </div>
+
+            <div class="ai-tip" id="aiTipBox">
+                <div class="ai-header" onclick="toggleAiDetails()">
+                    <span class="ai-summary" id="aiShortSummary">💡 AI 準備中...</span>
+                    <span class="ai-toggle" id="aiToggleIcon">展開 🔽</span>
+                </div>
+                <div class="ai-content" id="aiTipContent"></div>
+            </div>
+
+            <div class="history-tip" id="historyTip">
+                <div id="historyText"></div>
+                <button class="btn-use-past" onclick="applyPastRecord()">帶入上次數據</button>
+            </div>
+
+            <div class="form-group">
+                <label>重量與組數（格式：重量*次數/次數/...）</label>
+                <input type="text" id="recordValue" placeholder="例如: 35*12/12/12/12">
+            </div>
+
+            <button class="btn-submit" onclick="saveRecord()">儲存紀錄</button>
         </div>
 
-        <div class="history-tip" id="historyTip">
-            <div id="historyText"></div>
-            <button class="btn-use-past" onclick="applyPastRecord()">帶入上次數據</button>
+        <div class="card">
+            <h3>📅 歷史紀錄 (<span id="historyDaysDisplay">顯示設定天數</span>)</h3>
+            <div id="logList"></div>
         </div>
-
-        <div class="form-group">
-            <label>重量與組數（格式：重量*次數/次數/...）</label>
-            <input type="text" id="recordValue" placeholder="例如: 35*12/12/12/12">
-        </div>
-
-        <button class="btn-submit" onclick="saveRecord()">儲存紀錄</button>
     </div>
 
-    <div class="card">
-        <h3>📅 歷史紀錄 (<span id="historyDaysDisplay">顯示設定天數</span>)</h3>
-        <div id="logList"></div>
+    <div id="viewReport" class="view-section">
+        
+        <div class="card">
+            <h3>🍕 近 7 天肌肉部位分佈</h3>
+            <p style="font-size: 13px; color: #64748b; margin-top: 4px;">系統自動將你近一週的訓練歸類，看看是否有偏食！</p>
+            <div class="chart-container" style="height: 220px;">
+                <canvas id="musclePieChart"></canvas>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>📈 單一動作數據追蹤</h3>
+            <div class="form-group" style="margin-top: 12px;">
+                <select id="reportItemSelect" onchange="renderItemReport()">
+                    <option value="">-- 請選擇要分析的項目 --</option>
+                </select>
+            </div>
+            
+            <div id="itemReportContent" style="display: none;">
+                <div style="display: flex; gap: 8px;">
+                    <div class="stat-box" style="flex:1;">
+                        <div style="font-size: 12px; color: #166534;">近期頻率</div>
+                        <div class="stat-value" id="statFreq">-</div>
+                    </div>
+                    <div class="stat-box" style="flex:1;">
+                        <div style="font-size: 12px; color: #166534;">歷史最重 (PR)</div>
+                        <div class="stat-value" id="statPR">-</div>
+                    </div>
+                </div>
+                
+                <h4 style="margin: 0 0 8px 0; font-size: 14px; color: #334155;">💪 漸進式超負荷：重量與總容量趨勢</h4>
+                <div class="chart-container">
+                    <canvas id="itemTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-nav">
+        <div class="nav-item active" id="navRecord" onclick="switchTab('record')">📝 訓練紀錄</div>
+        <div class="nav-item" id="navReport" onclick="switchTab('report')">📊 統計報表</div>
     </div>
 
     <div class="modal-overlay" id="settingsModal">
         <div class="modal-content">
             <h3 style="margin-bottom: 16px;">⚙️ 系統設定</h3>
-            
             <div class="form-group">
-                <label>歷史紀錄顯示天數</label>
+                <label>首頁歷史顯示天數</label>
                 <input type="number" id="historyLimitInput" min="1" max="100" placeholder="例如: 5">
             </div>
-
             <div class="form-group">
                 <label>Gemini API Key</label>
                 <input type="password" id="apiKeyInput" placeholder="存在本地端，安全無虞">
             </div>
-            
             <div class="modal-buttons">
                 <button class="btn-close" onclick="toggleSettings(false)">取消</button>
                 <button class="btn-save-settings" onclick="saveSettings()">儲存</button>
@@ -146,13 +202,16 @@
         ];
 
         let myRecords = JSON.parse(localStorage.getItem('gym_records')) || builtInHistory;
-        
         let allCombinedRecords = [...builtInHistory, ...myRecords];
         let exerciseUniqueNames = [...new Set(allCombinedRecords.map(h => h.item))];
         
         let myKnowledgeBase = JSON.parse(localStorage.getItem('gym_knowledge_base')) || {};
         let geminiApiKey = localStorage.getItem('gym_gemini_key') || '';
         let historyLimit = parseInt(localStorage.getItem('gym_history_limit')) || 7;
+
+        // 圖表實例全域變數
+        let pieChartInst = null;
+        let trendChartInst = null;
 
         window.onload = function() {
             document.getElementById('trainingDate').value = new Date().toISOString().split('T')[0];
@@ -166,22 +225,34 @@
             setupBlurEvent();
         };
 
-        function toggleSettings(show) {
-            document.getElementById('settingsModal').style.display = show ? 'flex' : 'none';
+        // --- 畫面切換邏輯 ---
+        function switchTab(tab) {
+            // 切換按鈕亮燈
+            document.getElementById('navRecord').className = (tab === 'record') ? 'nav-item active' : 'nav-item';
+            document.getElementById('navReport').className = (tab === 'report') ? 'nav-item active' : 'nav-item';
+            // 切換畫面
+            document.getElementById('viewRecord').className = (tab === 'record') ? 'view-section active' : 'view-section';
+            document.getElementById('viewReport').className = (tab === 'report') ? 'view-section active' : 'view-section';
+
+            if (tab === 'report') {
+                renderPieChart();
+                populateReportSelect();
+            }
         }
 
+        function toggleSettings(show) { document.getElementById('settingsModal').style.display = show ? 'flex' : 'none'; }
+        
         function saveSettings() {
             const key = document.getElementById('apiKeyInput').value.trim();
             const limit = parseInt(document.getElementById('historyLimitInput').value);
-
             if (key) { localStorage.setItem('gym_gemini_key', key); geminiApiKey = key; }
             if (limit && limit > 0) { localStorage.setItem('gym_history_limit', limit); historyLimit = limit; }
-            
             toggleSettings(false);
             updateLogList();
             alert('設定儲存成功！');
         }
 
+        // --- 原有紀錄與AI邏輯 (保持穩定不變) ---
         const inputItem = document.getElementById('itemName');
         const box = document.getElementById('suggestionBox');
 
@@ -190,7 +261,6 @@
                 const val = this.value.trim().toLowerCase();
                 box.innerHTML = '';
                 if (!val) { box.style.display = 'none'; hideTips(); return; }
-
                 const matches = exerciseUniqueNames.filter(name => name.toLowerCase().includes(val));
                 if (matches.length > 0) {
                     matches.forEach(match => {
@@ -206,26 +276,16 @@
                     box.style.display = 'block';
                 } else { box.style.display = 'none'; }
             });
-
-            document.addEventListener('click', function(e) {
-                if (e.target !== inputItem) box.style.display = 'none';
-            });
+            document.addEventListener('click', function(e) { if (e.target !== inputItem) box.style.display = 'none'; });
         }
 
         function setupBlurEvent() {
             inputItem.addEventListener('blur', function() {
-                setTimeout(() => {
-                    if (box.style.display !== 'block' && inputItem.value.trim() !== '') {
-                        processItemSelection(inputItem.value.trim());
-                    }
-                }, 150);
+                setTimeout(() => { if (box.style.display !== 'block' && inputItem.value.trim() !== '') processItemSelection(inputItem.value.trim()); }, 150);
             });
         }
 
-        function processItemSelection(itemName) {
-            checkLastRecord(itemName);
-            fetchAIKnowledge(itemName);
-        }
+        function processItemSelection(itemName) { checkLastRecord(itemName); fetchAIKnowledge(itemName); }
 
         function hideTips() {
             document.getElementById('historyTip').style.display = 'none';
@@ -246,32 +306,23 @@
             } else { tipBox.style.display = 'none'; }
         }
 
-        function applyPastRecord() {
-            if (lastValueFound) document.getElementById('recordValue').value = lastValueFound;
-        }
+        function applyPastRecord() { if (lastValueFound) document.getElementById('recordValue').value = lastValueFound; }
 
         function toggleAiDetails() {
             const content = document.getElementById('aiTipContent');
             const icon = document.getElementById('aiToggleIcon');
-            if (content.style.display === 'none' && content.innerHTML !== '') {
-                content.style.display = 'block';
-                icon.textContent = '收起 🔼';
-            } else {
-                content.style.display = 'none';
-                icon.textContent = '展開 🔽';
-            }
+            if (content.style.display === 'none' && content.innerHTML !== '') { content.style.display = 'block'; icon.textContent = '收起 🔼'; } 
+            else { content.style.display = 'none'; icon.textContent = '展開 🔽'; }
         }
 
         async function fetchAIKnowledge(itemName) {
             const aiBox = document.getElementById('aiTipBox');
             const aiSummary = document.getElementById('aiShortSummary');
             const aiContent = document.getElementById('aiTipContent');
-            
             aiContent.style.display = 'none';
             document.getElementById('aiToggleIcon').textContent = '展開 🔽';
 
             const exactKey = Object.keys(myKnowledgeBase).find(k => k.toLowerCase() === itemName.toLowerCase());
-            
             if (exactKey) {
                 const info = myKnowledgeBase[exactKey];
                 aiSummary.innerHTML = `💡 ${info.summary}`;
@@ -282,55 +333,37 @@
 
             if (!geminiApiKey) {
                 aiSummary.innerHTML = `💡 請先至右上角設定 API 金鑰解鎖 AI 教練`;
-                aiContent.innerHTML = ``;
-                aiBox.style.display = 'block';
-                return;
+                aiBox.style.display = 'block'; return;
             }
 
             aiSummary.innerHTML = `⏳ AI 深度解析搜尋中...`;
-            aiContent.innerHTML = ``;
             aiBox.style.display = 'block';
 
             try {
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
+                // 🌟 Prompt 升級：強制要求回傳 category (部位分類)，讓未來的圓餅圖更精準
+                const promptText = `我正在健身，動作名稱是「${itemName}」。請以繁體中文分析此動作，並嚴格以 JSON 格式回傳，格式需包含三個 Key：
+                "category" (請從 胸部、背部、腿臀、肩部、手部、核心 這六個詞中選一個最符合的分類),
+                "summary" (一句話摘要),
+                "details" (詳細解剖細節與安全變化說明)。
+                切記：你的回應必須只有 JSON，絕對不要包含任何其他文字。`;
+
+                const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] }) });
+                if (!response.ok) { const errData = await response.json(); throw new Error(`Google API 拒絕連線: ${errData.error?.message || "未知錯誤"}`); }
                 
-                const promptText = `我正在健身，動作名稱是「${itemName}」。請以繁體中文分析此動作，並嚴格以 JSON 格式回傳，格式需包含兩個 Key："summary" (一句話摘要，例如：主要練闊背肌，注意肩胛收合)、"details" (詳細說明)。
-                在 "details" 的內容中，請分段說明（可以使用 \\n 來換行），必須包含：
-                1. 主要肌群與輔助肌群的解剖細節。
-                2. 執行時的安全注意事項。
-                3. 各種變化帶來的差異。
-                切記：你的回應必須只有 JSON，絕對不要包含任何其他文字或 Markdown 語法符號。`;
-
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
-                });
-
-                if (!response.ok) {
-                    const errData = await response.json();
-                    const googleErrorMsg = errData.error?.message || "未知錯誤";
-                    throw new Error(`Google API 拒絕連線: ${googleErrorMsg}`);
-                }
-                
-                const data = await response.json();
-                let rawText = data.candidates[0].content.parts[0].text;
-
+                let rawText = (await response.json()).candidates[0].content.parts[0].text;
                 let jsonStr = rawText.substring(rawText.indexOf('{'), rawText.lastIndexOf('}') + 1);
                 const aiResult = JSON.parse(jsonStr);
 
-                aiSummary.innerHTML = `💡 ${aiResult.summary}`;
+                aiSummary.innerHTML = `💡 [${aiResult.category || '未分類'}] ${aiResult.summary}`;
                 aiContent.innerHTML = aiResult.details;
                 
                 myKnowledgeBase[itemName] = aiResult;
                 localStorage.setItem('gym_knowledge_base', JSON.stringify(myKnowledgeBase));
-
             } catch (error) {
-                console.error("❌ 系統除錯錯誤紀錄:", error);
                 aiSummary.innerHTML = `❌ AI 解析失敗`;
-                aiContent.innerHTML = `<b>錯誤原因：</b><br>${error.message}<br><br>請確認您的 API 金鑰是否正確。`;
-                aiContent.style.display = 'block'; 
-                document.getElementById('aiToggleIcon').textContent = '收起 🔼';
+                aiContent.innerHTML = `<b>錯誤原因：</b><br>${error.message}`;
+                aiContent.style.display = 'block'; document.getElementById('aiToggleIcon').textContent = '收起 🔼';
             }
         }
 
@@ -338,40 +371,21 @@
             const date = document.getElementById('trainingDate').value;
             const item = inputItem.value.trim();
             const value = document.getElementById('recordValue').value.trim();
-
             if (!date || !item || !value) { alert("請填寫完整喔！"); return; }
 
             myRecords.unshift({ date, item, value });
             localStorage.setItem('gym_records', JSON.stringify(myRecords));
-            
-            if (!exerciseUniqueNames.includes(item)) {
-                exerciseUniqueNames.push(item);
-            }
+            if (!exerciseUniqueNames.includes(item)) exerciseUniqueNames.push(item);
 
-            inputItem.value = '';
-            document.getElementById('recordValue').value = '';
-            hideTips();
-            updateLogList();
-            inputItem.focus();
+            inputItem.value = ''; document.getElementById('recordValue').value = '';
+            hideTips(); updateLogList(); inputItem.focus();
         }
 
-        // 🌟 新增防呆刪除功能
         function deleteRecord(index) {
-            // 從總紀錄清單中抓出那筆資料，印出警告訊息讓使用者確認
             const record = myRecords[index];
-            const isConfirmed = confirm(`⚠️ 確定要刪除這筆紀錄嗎？\n\n日期：${record.date}\n項目：${record.item}\n重量：${record.value}\n\n(刪除後無法復原喔！)`);
-            
-            if (isConfirmed) {
-                // 從陣列中移除該筆資料
+            if (confirm(`⚠️ 確定要刪除這筆紀錄嗎？\n\n日期：${record.date}\n項目：${record.item}\n重量：${record.value}`)) {
                 myRecords.splice(index, 1);
-                // 更新回本地儲存
                 localStorage.setItem('gym_records', JSON.stringify(myRecords));
-                
-                // 同步更新字典（以防使用者刪掉了最後一筆某個動作，清單要跟著變乾淨）
-                allCombinedRecords = [...builtInHistory, ...myRecords];
-                exerciseUniqueNames = [...new Set(allCombinedRecords.map(h => h.item))];
-                
-                // 重新繪製歷史清單
                 updateLogList();
             }
         }
@@ -380,29 +394,166 @@
             const listObj = document.getElementById('logList');
             document.getElementById('historyDaysDisplay').textContent = `最近 ${historyLimit} 天`;
             listObj.innerHTML = '';
-
-            if (myRecords.length === 0) {
-                listObj.innerHTML = '<p style="color:#64748b;">暫無紀錄</p>';
-                return;
-            }
+            if (myRecords.length === 0) { listObj.innerHTML = '<p style="color:#64748b;">暫無紀錄</p>'; return; }
 
             const uniqueDates = [...new Set(myRecords.map(r => r.date))].sort((a, b) => new Date(b) - new Date(a));
             const allowedDates = uniqueDates.slice(0, historyLimit);
             const filteredRecords = myRecords.filter(r => allowedDates.includes(r.date));
 
-            // 🌟 將刪除按鈕與對應的「真實 index」綁定
             filteredRecords.forEach(r => {
                 const originalIndex = myRecords.indexOf(r);
                 const div = document.createElement('div');
                 div.className = 'log-item';
-                div.innerHTML = `
-                    <div class="log-content">
-                        <div class="log-date">${r.date}</div>
-                        <div><strong>${r.item}</strong>: ${r.value}</div>
-                    </div>
-                    <button class="btn-delete-log" onclick="deleteRecord(${originalIndex})" title="刪除此紀錄">🗑️</button>
-                `;
+                div.innerHTML = `<div class="log-content"><div class="log-date">${r.date}</div><div><strong>${r.item}</strong>: ${r.value}</div></div>
+                                 <button class="btn-delete-log" onclick="deleteRecord(${originalIndex})">🗑️</button>`;
                 listObj.appendChild(div);
+            });
+        }
+
+        // ==================== 📊 數據統計引擎 ====================
+
+        // 解析 35*12/12 這種字串，算出單組最大重量(PR)跟總容量(Volume)
+        function parseStats(valueStr) {
+            let totalVolume = 0;
+            let maxWeight = 0;
+            let currentWeight = 0;
+            
+            // 清理特殊字元（例如把 × 換成 *，去掉左右字眼）
+            let cleanStr = valueStr.replace(/×/g, '*').replace(/[左右]/g, '');
+            let sets = cleanStr.split('/');
+
+            sets.forEach(set => {
+                if (!set.trim()) return;
+                if (set.includes('*')) {
+                    let parts = set.split('*');
+                    let weight = parseFloat(parts[0]) || 0;
+                    currentWeight = weight;
+                    if (weight > maxWeight) maxWeight = weight;
+
+                    let reps = 1; // 處理 10*2*12 這種奇怪的寫法
+                    for(let i=1; i<parts.length; i++){
+                        let r = parseFloat(parts[i]);
+                        if(!isNaN(r)) reps *= r;
+                    }
+                    totalVolume += (weight * reps);
+                } else {
+                    let reps = parseFloat(set) || 0;
+                    totalVolume += (currentWeight * reps);
+                    if (currentWeight > maxWeight && currentWeight > 0) maxWeight = currentWeight;
+                }
+            });
+            return { maxWeight, totalVolume };
+        }
+
+        // 幫動作暴力分類的簡易字典（如果 AI 還沒查過，就用關鍵字猜）
+        function guessMuscle(itemName) {
+            const exactKey = Object.keys(myKnowledgeBase).find(k => k.toLowerCase() === itemName.toLowerCase());
+            if (exactKey && myKnowledgeBase[exactKey].category) return myKnowledgeBase[exactKey].category;
+            
+            const n = itemName.toLowerCase();
+            if (n.includes('chest') || n.includes('fly') || n.includes('push')) return '胸部';
+            if (n.includes('row') || n.includes('lat') || n.includes('pull')) return '背部';
+            if (n.includes('leg') || n.includes('squat') || n.includes('calf') || n.includes('lunge') || n.includes('hip')) return '腿臀';
+            if (n.includes('shoulder') || n.includes('deltoid') || n.includes('lateral')) return '肩部';
+            if (n.includes('crunch') || n.includes('ab')) return '核心';
+            return '手部/其他';
+        }
+
+        // 畫圓餅圖 (近7天部位)
+        function renderPieChart() {
+            // 抓出近7天的紀錄
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            const recentRecords = myRecords.filter(r => new Date(r.date) >= sevenDaysAgo);
+
+            let muscleCounts = {};
+            recentRecords.forEach(r => {
+                let cat = guessMuscle(r.item);
+                muscleCounts[cat] = (muscleCounts[cat] || 0) + 1; // 算組數/次數
+            });
+
+            const labels = Object.keys(muscleCounts);
+            const data = Object.values(muscleCounts);
+
+            if(pieChartInst) pieChartInst.destroy(); // 清除舊圖
+            const ctx = document.getElementById('musclePieChart').getContext('2d');
+            
+            if (labels.length === 0) {
+                // 如果沒有資料畫個空的
+                pieChartInst = new Chart(ctx, { type: 'pie', data: { labels: ['無紀錄'], datasets: [{ data: [1], backgroundColor: ['#e2e8f0'] }] }});
+                return;
+            }
+
+            pieChartInst = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#64748b']
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+            });
+        }
+
+        // 報表下拉選單塞資料
+        function populateReportSelect() {
+            const select = document.getElementById('reportItemSelect');
+            select.innerHTML = '<option value="">-- 請選擇要分析的項目 --</option>';
+            exerciseUniqueNames.sort().forEach(name => {
+                select.innerHTML += `<option value="${name}">${name}</option>`;
+            });
+        }
+
+        // 畫單一動作折線圖
+        function renderItemReport() {
+            const itemName = document.getElementById('reportItemSelect').value;
+            const contentBox = document.getElementById('itemReportContent');
+            
+            if(!itemName) { contentBox.style.display = 'none'; return; }
+            contentBox.style.display = 'block';
+
+            // 抓出該項目的所有歷史 (由舊到新排序，畫趨勢圖需要)
+            const itemRecords = myRecords.filter(r => r.item === itemName).reverse();
+            
+            let dates = [];
+            let prData = [];
+            let volData = [];
+            let maxPR = 0;
+
+            itemRecords.forEach(r => {
+                const stats = parseStats(r.value);
+                dates.push(r.date.substring(5)); // 只顯示 MM-DD
+                prData.push(stats.maxWeight);
+                volData.push(stats.totalVolume);
+                if (stats.maxWeight > maxPR) maxPR = stats.maxWeight;
+            });
+
+            // 更新上方面板數字
+            document.getElementById('statFreq').innerText = `${itemRecords.length} 次`;
+            document.getElementById('statPR').innerText = `${maxPR} kg`;
+
+            // 繪製雙軸折線圖
+            if(trendChartInst) trendChartInst.destroy();
+            const ctx = document.getElementById('itemTrendChart').getContext('2d');
+            trendChartInst = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [
+                        { label: '最大重量 (PR)', data: prData, borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', yAxisID: 'y', tension: 0.3, fill: true },
+                        { label: '總容量 (kg)', data: volData, borderColor: '#3b82f6', borderDash: [5, 5], yAxisID: 'y1', tension: 0.3 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    scales: {
+                        y: { type: 'linear', display: true, position: 'left', title: {display: true, text: '重量(kg)'} },
+                        y1: { type: 'linear', display: true, position: 'right', grid: {drawOnChartArea: false}, title: {display: true, text: '容量(kg)'} }
+                    }
+                }
             });
         }
     </script>
