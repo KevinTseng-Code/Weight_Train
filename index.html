@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>我的重訓助手 v3.0</title>
+    <title>我的重訓助手 v3.1</title>
     
-    <link rel="manifest" href="manifest.json?v=10">
-    <link rel="icon" type="image/png" href="icon.png?v=10" sizes="512x512">
-    <link rel="apple-touch-icon" href="icon.png?v=10">
+    <link rel="manifest" href="manifest.json?v=11">
+    <link rel="icon" type="image/png" href="icon.png?v=11" sizes="512x512">
+    <link rel="apple-touch-icon" href="icon.png?v=11">
     <meta name="theme-color" content="#3b82f6">
 
+    <!-- 🌟 引入 Chart.js 畫圖表用 -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
@@ -23,11 +24,10 @@
             --ai-border: #fef08a;
         }
         * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        /* 增加底部 padding 留給導覽列 */
         body { background-color: var(--bg); color: var(--text); margin: 0; padding: 16px; padding-bottom: 80px; }
         
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-        h2 { margin: 0; color: #0f172a; display: flex; align-items: center; gap: 8px; }
+        h2 { margin: 0; color: #0f172a; display: flex; align-items: center; gap: 8px; font-size: 22px; }
         .version-badge { background: #e2e8f0; color: #475569; font-size: 12px; padding: 2px 6px; border-radius: 12px; font-weight: normal; }
         h3 { margin: 0; color: #0f172a; }
         .btn-settings { background: none; border: none; font-size: 24px; cursor: pointer; padding: 4px; }
@@ -59,17 +59,19 @@
         .btn-delete-log { background: none; border: none; color: #ef4444; cursor: pointer; padding: 8px; font-size: 16px; opacity: 0.8; transition: 0.2s; }
 
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 999; }
-        .modal-content { background: white; padding: 20px; border-radius: 12px; width: 90%; max-width: 400px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .modal-content { background: white; padding: 20px; border-radius: 12px; width: 90%; max-width: 400px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-height: 90vh; overflow-y: auto;}
         .modal-buttons { display: flex; gap: 8px; margin-top: 16px; }
         .btn-save-settings { flex: 1; background: var(--primary); color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; }
         .btn-close { flex: 1; background: #e2e8f0; color: #475569; border: none; padding: 10px; border-radius: 6px; font-weight: bold; }
+        
+        /* 🌟 CSV 備份按鈕樣式 */
+        .btn-export { background: #10b981; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; flex: 1; font-size: 14px;}
+        .btn-import { background: #f59e0b; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; flex: 1; font-size: 14px;}
 
-        /* 🌟 底部導覽列樣式 */
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: white; display: flex; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); z-index: 900; }
         .nav-item { flex: 1; text-align: center; padding: 16px 0; font-size: 14px; font-weight: bold; color: #64748b; cursor: pointer; transition: 0.2s; }
         .nav-item.active { color: var(--primary); border-top: 3px solid var(--primary); background: #f0f7ff; }
 
-        /* 🌟 畫面切換控制 */
         .view-section { display: none; }
         .view-section.active { display: block; }
         
@@ -81,10 +83,11 @@
 <body>
 
     <div class="header">
-        <h2>🏋️ 我的重訓助手 <span class="version-badge">v3.0</span></h2>
+        <h2>🏋️ 我的重訓助手 <span class="version-badge">v3.1</span></h2>
         <button class="btn-settings" onclick="toggleSettings(true)">⚙️</button>
     </div>
 
+    <!-- ==================== 📝 畫面 1：訓練紀錄 ==================== -->
     <div id="viewRecord" class="view-section active">
         <div class="card">
             <div class="form-group">
@@ -125,8 +128,8 @@
         </div>
     </div>
 
+    <!-- ==================== 📊 畫面 2：統計報表 ==================== -->
     <div id="viewReport" class="view-section">
-        
         <div class="card">
             <h3>🍕 近 7 天肌肉部位分佈</h3>
             <p style="font-size: 13px; color: #64748b; margin-top: 4px;">系統自動將你近一週的訓練歸類，看看是否有偏食！</p>
@@ -163,11 +166,13 @@
         </div>
     </div>
 
+    <!-- ==================== 底部導覽列 ==================== -->
     <div class="bottom-nav">
         <div class="nav-item active" id="navRecord" onclick="switchTab('record')">📝 訓練紀錄</div>
         <div class="nav-item" id="navReport" onclick="switchTab('report')">📊 統計報表</div>
     </div>
 
+    <!-- ==================== 設定與備份 Modal ==================== -->
     <div class="modal-overlay" id="settingsModal">
         <div class="modal-content">
             <h3 style="margin-bottom: 16px;">⚙️ 系統設定</h3>
@@ -179,9 +184,19 @@
                 <label>Gemini API Key</label>
                 <input type="password" id="apiKeyInput" placeholder="存在本地端，安全無虞">
             </div>
+            
+            <!-- 🌟 CSV 備份與還原區塊 -->
+            <hr style="margin: 20px 0 16px 0; border: 0; border-top: 1px dashed #cbd5e1;">
+            <h4 style="margin: 0 0 12px 0; font-size: 14px; color: #334155;">💾 資料備份與還原</h4>
+            <div style="display: flex; gap: 8px; margin-bottom: 20px;">
+                <button class="btn-export" onclick="exportCSV()">匯出 CSV</button>
+                <input type="file" id="importFile" accept=".csv" style="display: none;" onchange="importCSV(event)">
+                <button class="btn-import" onclick="document.getElementById('importFile').click()">匯入 CSV</button>
+            </div>
+
             <div class="modal-buttons">
                 <button class="btn-close" onclick="toggleSettings(false)">取消</button>
-                <button class="btn-save-settings" onclick="saveSettings()">儲存</button>
+                <button class="btn-save-settings" onclick="saveSettings()">儲存設定</button>
             </div>
         </div>
     </div>
@@ -193,12 +208,7 @@
             { date: "2026-06-09", item: "Leg Extension", value: "47*12/12/49.5*12/13" },
             { date: "2026-06-08", item: "Diverging Lat Pulldown", value: "43*12*2/12右/12左/12右/12左/45×12右/12左" },
             { date: "2026-06-08", item: "Crossover Machine", value: "35*12/12/12/12" },
-            { date: "2026-06-08", item: "PL-Calf", value: "33.9*12/12/12/12" },
-            { date: "2026-06-08", item: "Seated Leg Curl", value: "50*12/12/45*/12/12" },
-            { date: "2026-06-08", item: "V-Crunch", value: "12/12/15/" },
-            { date: "2026-06-07", item: "Inclined Chest Press Circular", value: "30*12/12/12/12" },
-            { date: "2026-06-07", item: "Chest Press", value: "35*12/12/40*12/12" },
-            { date: "2026-06-07", item: "Squat Lunge", value: "11*2*12/左/右/左/右" }
+            { date: "2026-06-07", item: "Chest Press", value: "35*12/12/40*12/12" }
         ];
 
         let myRecords = JSON.parse(localStorage.getItem('gym_records')) || builtInHistory;
@@ -209,7 +219,6 @@
         let geminiApiKey = localStorage.getItem('gym_gemini_key') || '';
         let historyLimit = parseInt(localStorage.getItem('gym_history_limit')) || 7;
 
-        // 圖表實例全域變數
         let pieChartInst = null;
         let trendChartInst = null;
 
@@ -227,17 +236,106 @@
 
         // --- 畫面切換邏輯 ---
         function switchTab(tab) {
-            // 切換按鈕亮燈
             document.getElementById('navRecord').className = (tab === 'record') ? 'nav-item active' : 'nav-item';
             document.getElementById('navReport').className = (tab === 'report') ? 'nav-item active' : 'nav-item';
-            // 切換畫面
             document.getElementById('viewRecord').className = (tab === 'record') ? 'view-section active' : 'view-section';
             document.getElementById('viewReport').className = (tab === 'report') ? 'view-section active' : 'view-section';
 
-            if (tab === 'report') {
-                renderPieChart();
-                populateReportSelect();
+            if (tab === 'report') { renderPieChart(); populateReportSelect(); }
+        }
+
+        // --- 🌟 資料備份與還原邏輯 (CSV Export / Import) ---
+        function exportCSV() {
+            if (myRecords.length === 0) {
+                alert("目前沒有紀錄可以匯出喔！");
+                return;
             }
+            // 加上 \uFEFF BOM 標籤，讓 Excel 開啟時能正確辨識繁體中文 UTF-8
+            let csvContent = "\uFEFFDate,Item,Value\n";
+            
+            myRecords.forEach(r => {
+                // 將內容中的雙引號跳脫，以符合 CSV 格式
+                let itemEscaped = r.item.replace(/"/g, '""');
+                let valueEscaped = r.value.replace(/"/g, '""');
+                csvContent += `"${r.date}","${itemEscaped}","${valueEscaped}"\n`;
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `重訓紀錄備份_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function importCSV(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                const rows = text.split(/\r?\n/);
+                let importedCount = 0;
+                let skippedCount = 0;
+
+                // 從第 2 行開始跑 (跳過標題列)
+                for (let i = 1; i < rows.length; i++) {
+                    let row = rows[i].trim();
+                    if (!row) continue;
+                    
+                    // 用正規表示式安全地解析 CSV 欄位
+                    let cols = [];
+                    let quote = false;
+                    let val = '';
+                    for (let j = 0; j < row.length; j++) {
+                        let cc = row[j], nc = row[j+1];
+                        if (cc === '"' && quote && nc === '"') { val += '"'; j++; continue; }
+                        if (cc === '"') { quote = !quote; continue; }
+                        if (cc === ',' && !quote) { cols.push(val); val = ''; continue; }
+                        val += cc;
+                    }
+                    cols.push(val);
+
+                    if (cols.length >= 3) {
+                        let d = cols[0].trim();
+                        let it = cols[1].trim();
+                        let v = cols[2].trim();
+                        
+                        // 🌟 防呆整合機制：檢查本機是否已經有同一天、同一個動作的紀錄
+                        let exists = myRecords.find(r => r.date === d && r.item === it);
+                        if (exists) {
+                            skippedCount++; // 有重複且以本機為主，略過
+                        } else {
+                            myRecords.push({ date: d, item: it, value: v });
+                            importedCount++;
+                        }
+                    }
+                }
+
+                // 匯入完成後，自動將所有資料依據日期（由新到舊）重新排序
+                myRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
+                localStorage.setItem('gym_records', JSON.stringify(myRecords));
+                
+                // 更新下拉選單的字典
+                allCombinedRecords = [...builtInHistory, ...myRecords];
+                exerciseUniqueNames = [...new Set(allCombinedRecords.map(h => h.item))];
+                
+                // 更新畫面
+                updateLogList();
+                if(document.getElementById('viewReport').classList.contains('active')) {
+                    renderPieChart(); populateReportSelect(); renderItemReport();
+                }
+                
+                // 清空 input 讓下次選同一個檔案也能觸發 onchange
+                document.getElementById('importFile').value = '';
+                
+                alert(`匯入完成！\n成功新增：${importedCount} 筆\n略過重複：${skippedCount} 筆 (以本機紀錄為主)`);
+                toggleSettings(false);
+            };
+            reader.readAsText(file);
         }
 
         function toggleSettings(show) { document.getElementById('settingsModal').style.display = show ? 'flex' : 'none'; }
@@ -252,7 +350,7 @@
             alert('設定儲存成功！');
         }
 
-        // --- 原有紀錄與AI邏輯 (保持穩定不變) ---
+        // --- 動作輸入與搜尋邏輯 ---
         const inputItem = document.getElementById('itemName');
         const box = document.getElementById('suggestionBox');
 
@@ -341,7 +439,6 @@
 
             try {
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
-                // 🌟 Prompt 升級：強制要求回傳 category (部位分類)，讓未來的圓餅圖更精準
                 const promptText = `我正在健身，動作名稱是「${itemName}」。請以繁體中文分析此動作，並嚴格以 JSON 格式回傳，格式需包含三個 Key：
                 "category" (請從 胸部、背部、腿臀、肩部、手部、核心 這六個詞中選一個最符合的分類),
                 "summary" (一句話摘要),
@@ -374,7 +471,10 @@
             if (!date || !item || !value) { alert("請填寫完整喔！"); return; }
 
             myRecords.unshift({ date, item, value });
+            // 儲存時就確保時間是排序正確的
+            myRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
             localStorage.setItem('gym_records', JSON.stringify(myRecords));
+            
             if (!exerciseUniqueNames.includes(item)) exerciseUniqueNames.push(item);
 
             inputItem.value = ''; document.getElementById('recordValue').value = '';
@@ -411,14 +511,10 @@
         }
 
         // ==================== 📊 數據統計引擎 ====================
-
-        // 解析 35*12/12 這種字串，算出單組最大重量(PR)跟總容量(Volume)
         function parseStats(valueStr) {
             let totalVolume = 0;
             let maxWeight = 0;
             let currentWeight = 0;
-            
-            // 清理特殊字元（例如把 × 換成 *，去掉左右字眼）
             let cleanStr = valueStr.replace(/×/g, '*').replace(/[左右]/g, '');
             let sets = cleanStr.split('/');
 
@@ -429,8 +525,7 @@
                     let weight = parseFloat(parts[0]) || 0;
                     currentWeight = weight;
                     if (weight > maxWeight) maxWeight = weight;
-
-                    let reps = 1; // 處理 10*2*12 這種奇怪的寫法
+                    let reps = 1; 
                     for(let i=1; i<parts.length; i++){
                         let r = parseFloat(parts[i]);
                         if(!isNaN(r)) reps *= r;
@@ -445,7 +540,6 @@
             return { maxWeight, totalVolume };
         }
 
-        // 幫動作暴力分類的簡易字典（如果 AI 還沒查過，就用關鍵字猜）
         function guessMuscle(itemName) {
             const exactKey = Object.keys(myKnowledgeBase).find(k => k.toLowerCase() === itemName.toLowerCase());
             if (exactKey && myKnowledgeBase[exactKey].category) return myKnowledgeBase[exactKey].category;
@@ -459,9 +553,7 @@
             return '手部/其他';
         }
 
-        // 畫圓餅圖 (近7天部位)
         function renderPieChart() {
-            // 抓出近7天的紀錄
             const sevenDaysAgo = new Date();
             sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
             const recentRecords = myRecords.filter(r => new Date(r.date) >= sevenDaysAgo);
@@ -469,35 +561,27 @@
             let muscleCounts = {};
             recentRecords.forEach(r => {
                 let cat = guessMuscle(r.item);
-                muscleCounts[cat] = (muscleCounts[cat] || 0) + 1; // 算組數/次數
+                muscleCounts[cat] = (muscleCounts[cat] || 0) + 1;
             });
 
             const labels = Object.keys(muscleCounts);
             const data = Object.values(muscleCounts);
 
-            if(pieChartInst) pieChartInst.destroy(); // 清除舊圖
+            if(pieChartInst) pieChartInst.destroy();
             const ctx = document.getElementById('musclePieChart').getContext('2d');
             
             if (labels.length === 0) {
-                // 如果沒有資料畫個空的
                 pieChartInst = new Chart(ctx, { type: 'pie', data: { labels: ['無紀錄'], datasets: [{ data: [1], backgroundColor: ['#e2e8f0'] }] }});
                 return;
             }
 
             pieChartInst = new Chart(ctx, {
                 type: 'doughnut',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        data: data,
-                        backgroundColor: ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#64748b']
-                    }]
-                },
+                data: { labels: labels, datasets: [{ data: data, backgroundColor: ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#64748b'] }] },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
             });
         }
 
-        // 報表下拉選單塞資料
         function populateReportSelect() {
             const select = document.getElementById('reportItemSelect');
             select.innerHTML = '<option value="">-- 請選擇要分析的項目 --</option>';
@@ -506,7 +590,6 @@
             });
         }
 
-        // 畫單一動作折線圖
         function renderItemReport() {
             const itemName = document.getElementById('reportItemSelect').value;
             const contentBox = document.getElementById('itemReportContent');
@@ -514,7 +597,6 @@
             if(!itemName) { contentBox.style.display = 'none'; return; }
             contentBox.style.display = 'block';
 
-            // 抓出該項目的所有歷史 (由舊到新排序，畫趨勢圖需要)
             const itemRecords = myRecords.filter(r => r.item === itemName).reverse();
             
             let dates = [];
@@ -524,17 +606,15 @@
 
             itemRecords.forEach(r => {
                 const stats = parseStats(r.value);
-                dates.push(r.date.substring(5)); // 只顯示 MM-DD
+                dates.push(r.date.substring(5));
                 prData.push(stats.maxWeight);
                 volData.push(stats.totalVolume);
                 if (stats.maxWeight > maxPR) maxPR = stats.maxWeight;
             });
 
-            // 更新上方面板數字
             document.getElementById('statFreq').innerText = `${itemRecords.length} 次`;
             document.getElementById('statPR').innerText = `${maxPR} kg`;
 
-            // 繪製雙軸折線圖
             if(trendChartInst) trendChartInst.destroy();
             const ctx = document.getElementById('itemTrendChart').getContext('2d');
             trendChartInst = new Chart(ctx, {
@@ -547,8 +627,7 @@
                     ]
                 },
                 options: {
-                    responsive: true, maintainAspectRatio: false,
-                    interaction: { mode: 'index', intersect: false },
+                    responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
                     scales: {
                         y: { type: 'linear', display: true, position: 'left', title: {display: true, text: '重量(kg)'} },
                         y1: { type: 'linear', display: true, position: 'right', grid: {drawOnChartArea: false}, title: {display: true, text: '容量(kg)'} }
